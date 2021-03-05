@@ -40,4 +40,7 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	/** Returns	Pawn's eye location */
+	virtual FVector GetPawnViewLocation() const override;
+
 };
