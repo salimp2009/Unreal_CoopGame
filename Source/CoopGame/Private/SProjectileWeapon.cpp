@@ -2,7 +2,6 @@
 
 
 #include "SProjectileWeapon.h"
-#include "Engine/World.h"
 
 
 void ASProjectileWeapon::Fire()
