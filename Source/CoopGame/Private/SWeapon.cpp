@@ -30,7 +30,7 @@ void ASWeapon::BeginPlay()
 
 void ASWeapon::Fire()
 {
-	//Trace the world from PawnEye s location to Cross Hair Location
+	//Trace the world from PawnEye's location to Cross Hair Location
 	
 	AActor* MyOwner = GetOwner();
 	if (MyOwner)
