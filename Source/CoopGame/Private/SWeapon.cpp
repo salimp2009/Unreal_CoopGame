@@ -9,6 +9,7 @@
 #include "Particles\ParticleSystemComponent.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "CoopGame/CoopGame.h"
+#include "TimerManager.h"
 
 
 /** Console Command to activate/deactivate Debug Line for Line Trace*/
@@ -30,6 +31,26 @@ ASWeapon::ASWeapon()
 	TracerTargetName = "Target";
 
 	BaseDamage = 20.0f;
+
+	RateofFire = 600.0f;
+}
+
+void ASWeapon::BeginPlay()
+{
+	Super::BeginPlay();
+
+	/** Bullets per second (e.g: 10 bullets per sec) 
+		Refactored because if RateofFire =0.0 then will give an infite or NAN and no bullets
+		Can be deleted the RateofFire is clamped to 60 in the header so it cant be set lower than 650;
+	*/
+	if (RateofFire > 0.0f)
+	{
+		TimeBetweenShots = 60.0f / RateofFire;
+	}
+	else
+	{
+		TimeBetweenShots = 1.0f;
+	}
 }
 
 
@@ -105,9 +126,24 @@ void ASWeapon::Fire()
 		}
 
 		PlayFireEffects(TracerEndPoint);
+
+		LastFiredTime = GetWorld()->TimeSeconds;
 	}
 
 }
+
+void ASWeapon::StartFire()
+{
+	float FirstDelay = FMath::Max(LastFiredTime + TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
+	GetWorldTimerManager().SetTimer(TimerHandle_TimeBetweenShots, this, &ASWeapon::Fire, TimeBetweenShots, true, FirstDelay);
+
+}
+
+void ASWeapon::StopFire()
+{
+	GetWorldTimerManager().ClearTimer(TimerHandle_TimeBetweenShots);
+}
+
 
 /** TODO; make FVector && and use std::forward<FVector>(TracerEndPoint) when calling the function; check if it is safe to steal the value */
 void ASWeapon::PlayFireEffects(const FVector& TracerEndPoint) const
