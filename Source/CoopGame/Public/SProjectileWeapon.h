@@ -21,5 +21,4 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="ProjectileWeapon")
 	TSubclassOf<AActor> ProjectileClass;
 
-	
 };

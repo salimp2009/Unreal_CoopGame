@@ -20,6 +20,12 @@ FAutoConsoleVariableRef CVARDebugWeaponDrawing(
 	TEXT("Draw Debug Lines for Weapons"), 
 	ECVF_Cheat);
 
+/**TODO Feature List to Add;
+	- Add Ammo; (Must Have!!!)
+	- Sound Effect when Fired and when Hit (Must Have!!!)
+	- Add Destructible object or explode (optional)
+	- Show Ammo in UMG and name of Rifle and add it to Players UMG!! (Must Have!!!)
+*/
 
 // Sets default values
 ASWeapon::ASWeapon()
@@ -33,6 +39,9 @@ ASWeapon::ASWeapon()
 	BaseDamage = 20.0f;
 
 	RateofFire = 600.0f;
+
+	// Change this if weapon is not automatic!!
+	bAutomaticWeapon = true;
 }
 
 void ASWeapon::BeginPlay()
@@ -43,13 +52,17 @@ void ASWeapon::BeginPlay()
 		Refactored because if RateofFire =0.0 then will give an infite or NAN and no bullets
 		Can be deleted the RateofFire is clamped to 60 in the header so it cant be set lower than 650;
 	*/
-	if (RateofFire > 0.0f)
+	
+	if (bAutomaticWeapon)
 	{
-		TimeBetweenShots = 60.0f / RateofFire;
-	}
-	else
-	{
-		TimeBetweenShots = 1.0f;
+		if (RateofFire > 0.0f)
+		{
+			TimeBetweenShots = 60.0f / RateofFire;
+		}
+		else
+		{
+			TimeBetweenShots = 1.0f;
+		}
 	}
 }
 
@@ -127,21 +140,32 @@ void ASWeapon::Fire()
 
 		PlayFireEffects(TracerEndPoint);
 
-		LastFiredTime = GetWorld()->TimeSeconds;
+		if(bAutomaticWeapon) LastFiredTime = GetWorld()->TimeSeconds;
 	}
 
 }
 
 void ASWeapon::StartFire()
 {
-	float FirstDelay = FMath::Max(LastFiredTime + TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
-	GetWorldTimerManager().SetTimer(TimerHandle_TimeBetweenShots, this, &ASWeapon::Fire, TimeBetweenShots, true, FirstDelay);
+	if (bAutomaticWeapon)
+	{
+		float FirstDelay = FMath::Max(LastFiredTime + TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
+		GetWorldTimerManager().SetTimer(TimerHandle_TimeBetweenShots, this, &ASWeapon::Fire, TimeBetweenShots, true, FirstDelay);
+	}
+	else
+	{
+		Fire();
+	}
 
 }
 
 void ASWeapon::StopFire()
 {
-	GetWorldTimerManager().ClearTimer(TimerHandle_TimeBetweenShots);
+	if (bAutomaticWeapon)
+	{
+		GetWorldTimerManager().ClearTimer(TimerHandle_TimeBetweenShots);
+	}
+	
 }
 
 

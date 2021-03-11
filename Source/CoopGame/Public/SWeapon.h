@@ -67,6 +67,9 @@ protected:
 	// Derived from RateofFire
 	float TimeBetweenShots=0.0f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	bool bAutomaticWeapon;
+
 public:
 	void StartFire();
 	void StopFire();
