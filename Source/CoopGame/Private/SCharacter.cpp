@@ -6,6 +6,8 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "SWeapon.h"
+#include "CoopGame/CoopGame.h"
+#include "Components/CapsuleComponent.h"
 
 
 // Sets default values
@@ -21,6 +23,9 @@ ASCharacter::ASCharacter()
 	SpringArmComp->bUsePawnControlRotation = true;
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComp"));
 	CameraComp->SetupAttachment(SpringArmComp);
+
+	/* We want the weapon to hit the Mesh so it can use SurfaceType frm PhysicsAssets and play effects!! */
+	GetCapsuleComponent()->SetCollisionResponseToChannel(COLLISION_WEAPON, ECR_Ignore);
 
 	GetMovementComponent()->GetNavAgentPropertiesRef().bCanCrouch = true;
 
