@@ -8,6 +8,7 @@
 #include "SWeapon.h"
 #include "CoopGame/CoopGame.h"
 #include "Components/CapsuleComponent.h"
+#include "CoopGame/Public/Components/SHealthComponent.h"
 
 
 // Sets default values
@@ -23,6 +24,9 @@ ASCharacter::ASCharacter()
 	SpringArmComp->bUsePawnControlRotation = true;
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComp"));
 	CameraComp->SetupAttachment(SpringArmComp);
+
+	HealthComp = CreateDefaultSubobject<USHealthComponent>(TEXT("HealthComp"));
+
 
 	/* We want the weapon to hit the Mesh so it can use SurfaceType frm PhysicsAssets and play effects!! */
 	GetCapsuleComponent()->SetCollisionResponseToChannel(COLLISION_WEAPON, ECR_Ignore);
@@ -57,6 +61,7 @@ void ASCharacter::BeginPlay()
 		}
 	}
 
+	HealthComp->OnHealthChanged.AddDynamic(this, &ASCharacter::OnHealthChanged);
 }
 
 
@@ -107,6 +112,17 @@ void ASCharacter::StopFire()
 		CurrentWeapon->StopFire();
 	}
 
+}
+
+void ASCharacter::OnHealthChanged(USHealthComponent* OwningHealthComp, float Health, float HealthDelta, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
+{
+	//Die !!!
+	if (Health <= 0.0f && !bDied)
+	{
+		bDied = true;
+		GetMovementComponent()->StopMovementImmediately();
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
 }
 
 // Called every frame
