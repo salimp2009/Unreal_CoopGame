@@ -122,6 +122,10 @@ void ASCharacter::OnHealthChanged(USHealthComponent* OwningHealthComp, float Hea
 		bDied = true;
 		GetMovementComponent()->StopMovementImmediately();
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		DetachFromControllerPendingDestroy();
+		SetLifeSpan(10.0f);   // will be destroyed in 10 secs
+
+		//CurrentWeapon->SetLifeSpan(10.0f);
 	}
 }
 
@@ -167,5 +171,10 @@ FVector ASCharacter::GetPawnViewLocation() const
 	
 	//fallback if CameraComp fails
 	return Super::GetPawnViewLocation();
+}
+
+bool ASCharacter::HasDied_Implementation()
+{
+	return bDied;
 }
 

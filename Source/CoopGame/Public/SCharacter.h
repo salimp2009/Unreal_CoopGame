@@ -4,10 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "SPlayerInterface.h"
 #include "SCharacter.generated.h"
 
 UCLASS()
-class COOPGAME_API ASCharacter : public ACharacter
+class COOPGAME_API ASCharacter : public ACharacter, public ISPlayerInterface
 {
 	GENERATED_BODY()
 
@@ -69,6 +70,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Player")
 	bool bDied = false;
 
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -78,5 +80,9 @@ public:
 
 	/** Returns	Pawn's eye location */
 	virtual FVector GetPawnViewLocation() const override;
+
+	/* Player Interface Functions*/
+
+	bool HasDied_Implementation() override;
 
 };
