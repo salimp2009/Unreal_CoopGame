@@ -126,6 +126,7 @@ void ASCharacter::OnHealthChanged(USHealthComponent* OwningHealthComp, float Hea
 		SetLifeSpan(10.0f);   // will be destroyed in 10 secs
 
 		//CurrentWeapon->SetLifeSpan(10.0f);
+		
 	}
 }
 

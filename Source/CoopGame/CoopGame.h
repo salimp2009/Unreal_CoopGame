@@ -10,4 +10,3 @@
 
 
 #define COLLISION_WEAPON			ECC_GameTraceChannel1
-
