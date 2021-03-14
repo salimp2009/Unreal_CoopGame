@@ -9,6 +9,7 @@
 #include "CoopGame/CoopGame.h"
 #include "Components/CapsuleComponent.h"
 #include "CoopGame/Public/Components/SHealthComponent.h"
+#include "Net/UnrealNetwork.h"
 
 
 // Sets default values
@@ -45,23 +46,26 @@ void ASCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	DefaultFOV= CameraComp->FieldOfView;
+	HealthComp->OnHealthChanged.AddDynamic(this, &ASCharacter::OnHealthChanged);
 
-	//added safety check !!!
-	if (StarterWeaponClass)
+	if (HasAuthority())
 	{
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-		CurrentWeapon = GetWorld()->SpawnActor<ASWeapon>(StarterWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
-
-		if (CurrentWeapon)
+		//added safety check !!!
+		if (StarterWeaponClass)
 		{
-			CurrentWeapon->SetOwner(this);
-			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+			CurrentWeapon = GetWorld()->SpawnActor<ASWeapon>(StarterWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+			if (CurrentWeapon)
+			{
+				CurrentWeapon->SetOwner(this);
+				CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponAttachSocketName);
+			}
 		}
+
 	}
 
-	HealthComp->OnHealthChanged.AddDynamic(this, &ASCharacter::OnHealthChanged);
 }
 
 
@@ -174,6 +178,17 @@ FVector ASCharacter::GetPawnViewLocation() const
 	return Super::GetPawnViewLocation();
 }
 
+
+void ASCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ASCharacter, CurrentWeapon);
+}
+
+
+
+// Player Interface function c++ implementation
 bool ASCharacter::HasDied_Implementation()
 {
 	return bDied;

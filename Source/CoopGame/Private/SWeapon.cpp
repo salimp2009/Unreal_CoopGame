@@ -10,6 +10,7 @@
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "CoopGame/CoopGame.h"
 #include "TimerManager.h"
+#include "Net/UnrealNetwork.h"
 
 
 /** Console Command to activate/deactivate Debug Line for Line Trace*/
@@ -42,6 +43,9 @@ ASWeapon::ASWeapon()
 
 	// Change this if weapon is not automatic!!
 	bAutomaticWeapon = true;
+
+	SetReplicates(true);
+
 }
 
 void ASWeapon::BeginPlay()
@@ -71,6 +75,13 @@ void ASWeapon::Fire()
 {
 	//Trace the world from PawnEye's location to Cross Hair Location
 	
+	if (!HasAuthority())
+	{
+		ServerFire();
+		return;
+	
+	}
+
 	AActor* MyOwner = GetOwner();
 	if (MyOwner)
 	{
@@ -145,6 +156,19 @@ void ASWeapon::Fire()
 
 }
 
+// UE specific C++ implementation of ServerFire
+void ASWeapon::ServerFire_Implementation()
+{
+	Fire();
+
+}
+
+// UE specific C++ implementation of ServerFire since Validate is used in UFUNCTION property
+bool ASWeapon::ServerFire_Validate()
+{
+	return true;
+}
+
 void ASWeapon::StartFire()
 {
 	if (bAutomaticWeapon)
@@ -156,7 +180,6 @@ void ASWeapon::StartFire()
 	{
 		Fire();
 	}
-
 }
 
 void ASWeapon::StopFire()
@@ -165,7 +188,6 @@ void ASWeapon::StopFire()
 	{
 		GetWorldTimerManager().ClearTimer(TimerHandle_TimeBetweenShots);
 	}
-	
 }
 
 

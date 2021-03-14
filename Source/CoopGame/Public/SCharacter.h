@@ -16,6 +16,8 @@ public:
 	// Sets default values for this character's properties
 	ASCharacter();
 
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -52,6 +54,7 @@ protected:
 
 	void EndZoom();
 
+	UPROPERTY(Replicated)
 	class ASWeapon* CurrentWeapon;
 
 	UPROPERTY(EditDefaultsOnly, Category="Player")

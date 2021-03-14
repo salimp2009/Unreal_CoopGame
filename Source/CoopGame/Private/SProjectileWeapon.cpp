@@ -6,6 +6,12 @@
 
 void ASProjectileWeapon::Fire()
 {
+
+	if (!HasAuthority())
+	{
+		ServerFire();
+		return;
+	}
 	AActor* MyOwner = GetOwner();
 	if (MyOwner && ProjectileClass)
 	{
@@ -24,5 +30,7 @@ void ASProjectileWeapon::Fire()
 		GetWorld()->SpawnActor<AActor>(ProjectileClass, MuzzleLocation, EyeRotation, SpawnParams);
 
 	}
+
+	
 }
 
