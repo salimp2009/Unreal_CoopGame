@@ -40,13 +40,13 @@ ASCharacter::ASCharacter()
 	WeaponAttachSocketName = "WeaponSocket";
 }
 
-// Called when the game starts or when spawned
+// Called when the game starts or when spawned; called both on Client and Server
 void ASCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	DefaultFOV= CameraComp->FieldOfView;
 
-	// TODO; added safety check if works or if we have to dereference the variable!!!!!
+	//added safety check !!!
 	if (StarterWeaponClass)
 	{
 		FActorSpawnParameters SpawnParams;

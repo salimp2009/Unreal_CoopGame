@@ -58,5 +58,6 @@ void ASExplosiveBarrel::OnHealthChanged(USHealthComponent* OwningHealthComp, flo
 		TArray<AActor*> IgnoredActors;
 		IgnoredActors.Add(this);
 		UGameplayStatics::ApplyRadialDamage(GetWorld(), 100.0f, GetActorLocation(), 500.0f, RadialDamageType, IgnoredActors, this, GetInstigatorController(), true, ECC_Visibility);
+
 	}
 }
