@@ -6,6 +6,23 @@
 #include "GameFramework/Actor.h"
 #include "SWeapon.generated.h"
 
+
+/** Contains SingleLineTrace info to be sent from server to other play FX */
+USTRUCT()
+struct FHitScanTrace  
+{
+	GENERATED_BODY()
+
+public:
+	/** zero decimal precision to be used sending less data to network; For efficiency */
+	UPROPERTY()
+	FVector_NetQuantize TraceFrom;
+
+	UPROPERTY()
+	FVector_NetQuantize TraceTo;
+};
+
+
 UCLASS()
 class COOPGAME_API ASWeapon : public AActor
 {
@@ -14,6 +31,10 @@ class COOPGAME_API ASWeapon : public AActor
 public:	
 	// Sets default values for this actor's properties
 	ASWeapon();
+
+	/** Returns the properties used for network replication, this needs to be overridden by all actor classes with native replicated properties */
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 
 protected:
 	virtual void BeginPlay() override;
@@ -73,6 +94,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	bool bAutomaticWeapon;
 
+	UPROPERTY(ReplicatedUsing=OnRep_HitScanTrace)
+	FHitScanTrace HitScanTrace;
+
+	UFUNCTION()
+	void OnRep_HitScanTrace();
 public:
 	void StartFire();
 	void StopFire();

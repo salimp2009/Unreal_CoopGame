@@ -78,8 +78,6 @@ void ASWeapon::Fire()
 	if (!HasAuthority())
 	{
 		ServerFire();
-		return;
-	
 	}
 
 	AActor* MyOwner = GetOwner();
@@ -151,6 +149,11 @@ void ASWeapon::Fire()
 
 		PlayFireEffects(TracerEndPoint);
 
+		if (HasAuthority())
+		{
+			HitScanTrace.TraceTo = TracerEndPoint;
+		}
+
 		if(bAutomaticWeapon) LastFiredTime = GetWorld()->TimeSeconds;
 	}
 
@@ -167,6 +170,12 @@ void ASWeapon::ServerFire_Implementation()
 bool ASWeapon::ServerFire_Validate()
 {
 	return true;
+}
+
+void ASWeapon::OnRep_HitScanTrace()
+{
+	// Play FX
+	PlayFireEffects(HitScanTrace.TraceTo);
 }
 
 void ASWeapon::StartFire()
@@ -222,5 +231,13 @@ void ASWeapon::PlayFireEffects(const FVector& TracerEndPoint) const
 		}
 	}
 	
+}
+
+void ASWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// The client who owns the weapon will be excluded from Replication; it will be sent to other clients to see each other FX
+	DOREPLIFETIME_CONDITION(ASWeapon, HitScanTrace, COND_SkipOwner);
 }
 

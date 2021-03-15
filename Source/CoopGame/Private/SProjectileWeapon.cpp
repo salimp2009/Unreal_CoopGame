@@ -4,13 +4,13 @@
 #include "SProjectileWeapon.h"
 
 
+
 void ASProjectileWeapon::Fire()
 {
 
 	if (!HasAuthority())
 	{
 		ServerFire();
-		return;
 	}
 	AActor* MyOwner = GetOwner();
 	if (MyOwner && ProjectileClass)
