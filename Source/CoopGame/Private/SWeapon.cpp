@@ -41,10 +41,15 @@ ASWeapon::ASWeapon()
 
 	RateofFire = 600.0f;
 
-	// Change this if weapon is not automatic!!
 	bAutomaticWeapon = true;
 
 	SetReplicates(true);
+
+	/* Default value is 100.0f in AActor InitializeDefaults()*/
+	/* Changed to be able to automatic weapon update when hitting the same location otherwise clients dont see the updates*/
+	NetUpdateFrequency = 66.0f;
+	/* Default value is 2.0f in AActor InitializeDefaults()*/
+	MinNetUpdateFrequency = 33.0f;
 
 }
 
@@ -99,6 +104,8 @@ void ASWeapon::Fire()
 
 		// Particle "Target" parameter
 		FVector TracerEndPoint=TraceEnd;
+
+		EPhysicalSurface SurfaceType = SurfaceType_Default;
 		
 		FHitResult Hit;
 		if (GetWorld()->LineTraceSingleByChannel(Hit, EyeLocation, TraceEnd, COLLISION_WEAPON, QueryParams)) // COLLISION_WEAPON is macro defined CoopGame.h
@@ -106,7 +113,7 @@ void ASWeapon::Fire()
 			//Blocking Hit true; Process Damage
 			AActor* HitActor = Hit.GetActor();
 
-			EPhysicalSurface SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
+			SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
 
 			float ActualDamage = BaseDamage;
 
@@ -117,23 +124,7 @@ void ASWeapon::Fire()
 
 			UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShotDirection, Hit, MyOwner->GetInstigatorController(),this, DamageType);
 			
-			UParticleSystem* SelectedEffect = nullptr;
-			switch (SurfaceType)
-			{
-				case SURFACE_FLESHDEAFULT:				//SurfaceType1 macro define CoopGame.h
-				case SURFACE_FLESHVULNERABLE:			//SurfaceType2:
-					SelectedEffect = FleshImpactEffect;
-					break;
-				default:
-					SelectedEffect = DefaultImpactEffect;
-					break;
-			}
-
-			if (SelectedEffect)
-			{
-				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
-			}
-
+			PlayImpactEffects(SurfaceType, Hit.ImpactPoint);
 			
 			TracerEndPoint = Hit.ImpactPoint;
 		}
@@ -152,6 +143,10 @@ void ASWeapon::Fire()
 		if (HasAuthority())
 		{
 			HitScanTrace.TraceTo = TracerEndPoint;
+			HitScanTrace.SurfaceType = SurfaceType;
+			// Incremented every update to prevent server not updating when location does not change!!!
+			// TODO ; check if +1 might not work if the player does not move long duration then add %
+			HitScanTrace.Seed+=1;
 		}
 
 		if(bAutomaticWeapon) LastFiredTime = GetWorld()->TimeSeconds;
@@ -176,6 +171,7 @@ void ASWeapon::OnRep_HitScanTrace()
 {
 	// Play FX
 	PlayFireEffects(HitScanTrace.TraceTo);
+	PlayImpactEffects(HitScanTrace.SurfaceType, HitScanTrace.TraceTo);
 }
 
 void ASWeapon::StartFire()
@@ -231,6 +227,31 @@ void ASWeapon::PlayFireEffects(const FVector& TracerEndPoint) const
 		}
 	}
 	
+}
+
+void ASWeapon::PlayImpactEffects(EPhysicalSurface SurfaceType, const FVector& ImpactPoint) const
+{
+
+	UParticleSystem* SelectedEffect = nullptr;
+	switch (SurfaceType)
+	{
+	case SURFACE_FLESHDEAFULT:				//SurfaceType1 macro define CoopGame.h
+	case SURFACE_FLESHVULNERABLE:			//SurfaceType2:
+		SelectedEffect = FleshImpactEffect;
+		break;
+	default:
+		SelectedEffect = DefaultImpactEffect;
+		break;
+	}
+
+	if (SelectedEffect)
+	{
+		FVector MuzzleLocation = MeshComp->GetSocketLocation(MuzzleSocketName);
+		FVector ShotDirection = ImpactPoint - MuzzleLocation;
+		ShotDirection.Normalize();
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedEffect, ImpactPoint, ShotDirection.Rotation());
+	}
+
 }
 
 void ASWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

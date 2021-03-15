@@ -14,12 +14,15 @@ struct FHitScanTrace
 	GENERATED_BODY()
 
 public:
-	/** zero decimal precision to be used sending less data to network; For efficiency */
+	/** Enum values has to be converted to uint8 to be able to use in Struct and safely pass to server*/
 	UPROPERTY()
-	FVector_NetQuantize TraceFrom;
-
+	TEnumAsByte<EPhysicalSurface> SurfaceType;
+	/** Zero decimal precision used to send less data to network; For efficiency */
 	UPROPERTY()
 	FVector_NetQuantize TraceTo;
+	/*Work Around to avoid Server not updating if the location has not changed*/
+	UPROPERTY()
+	int Seed = 0;
 };
 
 
@@ -43,6 +46,8 @@ protected:
 	class USkeletalMeshComponent* MeshComp;
 
 	void PlayFireEffects(const FVector& TracerEndPoint) const;
+
+	void PlayImpactEffects(EPhysicalSurface SurfaceType, const FVector& ImpactPoint) const;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon")
 	TSubclassOf<class UDamageType> DamageType;
