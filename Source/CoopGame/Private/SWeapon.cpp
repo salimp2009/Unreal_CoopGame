@@ -144,8 +144,8 @@ void ASWeapon::Fire()
 		{
 			HitScanTrace.TraceTo = TracerEndPoint;
 			HitScanTrace.SurfaceType = SurfaceType;
-			// Incremented every update to prevent server not updating when location does not change!!!
-			// TODO ; check if +1 might not work if the player does not move long duration then add %
+			// Seed is incremented every update to prevent server not updating (UE4bug) when location does not change!!!
+			// TODO ; check if +1 might not work if the player does not move long duration then add %2 (%3might be expensive)!!!
 			HitScanTrace.Seed+=1;
 		}
 

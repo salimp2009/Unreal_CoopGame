@@ -15,6 +15,9 @@ public:
 	// Sets default values for this actor's properties
 	ASExplosiveBarrel();
 
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+
 protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
@@ -29,7 +32,11 @@ protected:
 	UFUNCTION()
 	void OnHealthChanged(USHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
 
+	UPROPERTY(ReplicatedUsing = OnRep_bExploded)
 	bool bExploded = false;
+
+	UFUNCTION()
+	void OnRep_bExploded();
 
 	UPROPERTY(EditDefaultsOnly, Category = "FX")
 	float ExplosionImpulse;

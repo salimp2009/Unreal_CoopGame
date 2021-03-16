@@ -6,7 +6,8 @@
 #include "PhysicsEngine/RadialForceComponent.h"
 #include "Particles/ParticleSystem.h"
 #include "Kismet/GameplayStatics.h"
-#include <GameFramework/DamageType.h>
+#include "GameFramework/DamageType.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 ASExplosiveBarrel::ASExplosiveBarrel()
@@ -28,7 +29,16 @@ ASExplosiveBarrel::ASExplosiveBarrel()
 	RadialForceComp->bIgnoreOwningActor = true;
 
 	ExplosionImpulse = 400.0f;
+	SetReplicates(true);
+	SetReplicateMovement(true);
 
+}
+
+void ASExplosiveBarrel::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ASExplosiveBarrel, bExploded);
 }
 
 void ASExplosiveBarrel::OnHealthChanged(USHealthComponent* OwningHealthComp, float Health, float HealthDelta, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
@@ -42,16 +52,12 @@ void ASExplosiveBarrel::OnHealthChanged(USHealthComponent* OwningHealthComp, flo
 	if (Health <= 0)
 	{
 		bExploded = true;
+		OnRep_bExploded();
 
 		// Push the mesh upwards
 		FVector BoostIntensity = FVector::UpVector * ExplosionImpulse;
 		MeshComp->AddImpulse(BoostIntensity, NAME_None, true);
 
-		// Play particles FX
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionFX, GetActorLocation());
-
-		MeshComp->SetMaterial(0, ExplodedMaterial);
-		
 		RadialForceComp->FireImpulse();
 
 		//Radial Damage
@@ -60,4 +66,11 @@ void ASExplosiveBarrel::OnHealthChanged(USHealthComponent* OwningHealthComp, flo
 		UGameplayStatics::ApplyRadialDamage(GetWorld(), 100.0f, GetActorLocation(), 500.0f, RadialDamageType, IgnoredActors, this, GetInstigatorController(), true, ECC_Visibility);
 
 	}
+}
+
+void ASExplosiveBarrel::OnRep_bExploded()
+{
+	// Play particles FX
+	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionFX, GetActorLocation());
+	MeshComp->SetMaterial(0, ExplodedMaterial);
 }

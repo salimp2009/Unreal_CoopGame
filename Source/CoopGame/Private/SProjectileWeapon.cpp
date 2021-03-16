@@ -29,6 +29,7 @@ void ASProjectileWeapon::Fire()
 
 		GetWorld()->SpawnActor<AActor>(ProjectileClass, MuzzleLocation, EyeRotation, SpawnParams);
 
+
 	}
 
 	
