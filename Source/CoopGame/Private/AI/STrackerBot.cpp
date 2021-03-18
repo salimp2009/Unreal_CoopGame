@@ -5,6 +5,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "NavigationSystem.h"
 #include "NavigationPath.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/Character.h"
 
 // Sets default values
 ASTrackerBot::ASTrackerBot()
@@ -26,13 +28,21 @@ void ASTrackerBot::BeginPlay()
 
 FVector ASTrackerBot::GetNextPathPoint()
 {
-	UNavigationPath* PathPoints=UNavigationSystemV1::FindPathToActorSynchronously(GetWorld(), GetActorLocation(), GetWorld()->GetFirstPlayerController()->GetPawn());
-	
-	if (PathPoints)
+	//TODO; hack to get the player location; need to get the closest one instead
+	ACharacter* PlayerPawn = UGameplayStatics::GetPlayerCharacter(this, 0);
+	if (PlayerPawn)
 	{
-		
+		// chases the target actor until it reaches even if the target moves until target stops && AI reaches target
+		UNavigationPath* NavPath=UNavigationSystemV1::FindPathToActorSynchronously(this, GetActorLocation(), PlayerPawn);
+		if (NavPath->PathPoints.Num()>1)
+		{
+			// next point in the path(first one is the AIs location)
+			return NavPath->PathPoints[1];
+		}
 	}
-	return FVector();
+
+	// failed to find a target!!!
+	return GetActorLocation();
 }
 
 // Called every frame
