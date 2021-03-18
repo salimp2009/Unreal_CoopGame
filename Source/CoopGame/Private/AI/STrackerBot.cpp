@@ -7,6 +7,7 @@
 #include "NavigationPath.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
+#include "DrawDebugHelpers.h"
 
 // Sets default values
 ASTrackerBot::ASTrackerBot()
@@ -16,19 +17,24 @@ ASTrackerBot::ASTrackerBot()
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
 	MeshComp->SetCanEverAffectNavigation(false);
+	MeshComp->SetSimulatePhysics(true);
 	RootComponent = MeshComp;
 
+	MovementForce = 1000.0f;
+	bUseVelocityChange = true;
+	RequiredDistanceToTarget = 100.0f;
 }
 
 void ASTrackerBot::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	//initial MoveTo location
+	NextPathPoint = GetNextPathPoint();
 }
 
 FVector ASTrackerBot::GetNextPathPoint()
 {
-	//TODO; hack to get the player location; need to get the closest one instead
+	//TODO; this is a hack to get the player location from Zero index player; need to get the closest one instead
 	ACharacter* PlayerPawn = UGameplayStatics::GetPlayerCharacter(this, 0);
 	if (PlayerPawn)
 	{
@@ -50,5 +56,26 @@ void ASTrackerBot::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	float DistanceToTarget =(GetActorLocation() - NextPathPoint).Size(); // (NextPathPoint - GetActorLocation()).Distance();
+
+	if (DistanceToTarget<=RequiredDistanceToTarget)
+	{
+		NextPathPoint = GetNextPathPoint();
+		DrawDebugString(GetWorld(), GetActorLocation(), "Target Reached !!!");
+	}
+	else
+	{
+		//Keep Moving Towards Target
+		FVector ForceDirection = (NextPathPoint - GetActorLocation());
+		ForceDirection.Normalize();
+		ForceDirection *= MovementForce;   // Add Force Impulse
+
+		MeshComp->AddForce(ForceDirection, NAME_None, bUseVelocityChange);
+
+		DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation()+ForceDirection, 32.0f, FColor::Green, false, 0.0f, 0, 2.0f);
+	}
+
+	DrawDebugSphere(GetWorld(),	NextPathPoint, 20.0f, 12, FColor::Blue, false, 0.0f, 0, 2.0f);
+	
 }
 
