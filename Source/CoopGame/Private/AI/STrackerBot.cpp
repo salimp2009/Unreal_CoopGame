@@ -8,17 +8,20 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 #include "DrawDebugHelpers.h"
+#include "Components/SHealthComponent.h"
 
-// Sets default values
+
 ASTrackerBot::ASTrackerBot()
 {
-	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
 	MeshComp->SetCanEverAffectNavigation(false);
 	MeshComp->SetSimulatePhysics(true);
 	RootComponent = MeshComp;
+
+	HealthComp = CreateDefaultSubobject<USHealthComponent>(TEXT("HealthComp"));
+	HealthComp->OnHealthChanged.AddDynamic(this, &ASTrackerBot::HandleTakeDamage);
 
 	MovementForce = 1000.0f;
 	bUseVelocityChange = true;
@@ -30,6 +33,12 @@ void ASTrackerBot::BeginPlay()
 	Super::BeginPlay();
 	//initial MoveTo location
 	NextPathPoint = GetNextPathPoint();
+}
+
+void ASTrackerBot::HandleTakeDamage(USHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
+{
+	// Explode on hitpoints == 0
+	// TODO: Pulse/change the material on hit
 }
 
 FVector ASTrackerBot::GetNextPathPoint()
@@ -50,6 +59,7 @@ FVector ASTrackerBot::GetNextPathPoint()
 	// failed to find a target!!!
 	return GetActorLocation();
 }
+
 
 // Called every frame
 void ASTrackerBot::Tick(float DeltaTime)

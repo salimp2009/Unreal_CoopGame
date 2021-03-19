@@ -196,7 +196,6 @@ void ASWeapon::StopFire()
 }
 
 
-/** TODO; make FVector && and use std::forward<FVector>(TracerEndPoint) when calling the function; check if it is safe to steal the value */
 void ASWeapon::PlayFireEffects(const FVector& TracerEndPoint) const
 {
 	// muzzle flash FX

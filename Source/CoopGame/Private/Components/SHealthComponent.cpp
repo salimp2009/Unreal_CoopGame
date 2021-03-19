@@ -11,6 +11,7 @@ USHealthComponent::USHealthComponent()
 
 	SetIsReplicated(true);
 
+	// Alternative to use; Some people has problem with the above version but not here
 	//SetIsReplicatedByDefault(true); 
 }
 
