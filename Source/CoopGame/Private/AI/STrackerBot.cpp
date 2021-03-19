@@ -8,7 +8,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 #include "DrawDebugHelpers.h"
-#include "Components/SHealthComponent.h"
+#include "CoopGame/Public/Components/SHealthComponent.h"
+//#include "Materials/MaterialInstanceDynamic.h"
 
 
 ASTrackerBot::ASTrackerBot()
@@ -21,7 +22,8 @@ ASTrackerBot::ASTrackerBot()
 	RootComponent = MeshComp;
 
 	HealthComp = CreateDefaultSubobject<USHealthComponent>(TEXT("HealthComp"));
-	HealthComp->OnHealthChanged.AddDynamic(this, &ASTrackerBot::HandleTakeDamage);
+	/* OnHealthChanged does not work if it is in constructor therefore move to BeginPlay() and it works*/
+	//HealthComp->OnHealthChanged.AddDynamic(this, &ASTrackerBot::HandleTakeDamage);
 
 	MovementForce = 1000.0f;
 	bUseVelocityChange = true;
@@ -33,12 +35,25 @@ void ASTrackerBot::BeginPlay()
 	Super::BeginPlay();
 	//initial MoveTo location
 	NextPathPoint = GetNextPathPoint();
+	HealthComp->OnHealthChanged.AddDynamic(this, &ASTrackerBot::HandleTakeDamage);
 }
 
 void ASTrackerBot::HandleTakeDamage(USHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
 {
 	// Explode on hitpoints == 0
 	// TODO: Pulse/change the material on hit
+
+	if (MatInst==nullptr)
+	{
+		MatInst = MeshComp->CreateDynamicMaterialInstance(0, MeshComp->GetMaterial(0));
+	}
+
+	if (MatInst)
+	{
+		MatInst->SetScalarParameterValue("LastTimeDamageTaken", GetWorld()->TimeSeconds);
+	}
+	
+	UE_LOG(LogTemp, Log, TEXT("Health %s of %s"), *FString::SanitizeFloat(Health), *GetName());
 }
 
 FVector ASTrackerBot::GetNextPathPoint()

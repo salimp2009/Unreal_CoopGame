@@ -9,10 +9,10 @@ USHealthComponent::USHealthComponent()
 {
 	DefaultHealth = 100.0f;
 
-	SetIsReplicated(true);
+	//SetIsReplicated(true);
 
 	// Alternative to use; Some people has problem with the above version but not here
-	//SetIsReplicatedByDefault(true); 
+	SetIsReplicatedByDefault(true); 
 }
 
 
