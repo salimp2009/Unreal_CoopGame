@@ -9,7 +9,6 @@
 #include "GameFramework/Character.h"
 #include "DrawDebugHelpers.h"
 #include "CoopGame/Public/Components/SHealthComponent.h"
-//#include "Materials/MaterialInstanceDynamic.h"
 
 
 ASTrackerBot::ASTrackerBot()
@@ -28,6 +27,9 @@ ASTrackerBot::ASTrackerBot()
 	MovementForce = 1000.0f;
 	bUseVelocityChange = true;
 	RequiredDistanceToTarget = 100.0f;
+
+	ExplosionRadius = 200.0f;
+	ExplosionDamage = 40.0f;
 }
 
 void ASTrackerBot::BeginPlay()
@@ -40,9 +42,6 @@ void ASTrackerBot::BeginPlay()
 
 void ASTrackerBot::HandleTakeDamage(USHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
 {
-	// Explode on hitpoints == 0
-	// TODO: Pulse/change the material on hit
-
 	if (MatInst==nullptr)
 	{
 		MatInst = MeshComp->CreateDynamicMaterialInstance(0, MeshComp->GetMaterial(0));
@@ -54,6 +53,12 @@ void ASTrackerBot::HandleTakeDamage(USHealthComponent* OwningHealthComp, float H
 	}
 	
 	UE_LOG(LogTemp, Log, TEXT("Health %s of %s"), *FString::SanitizeFloat(Health), *GetName());
+
+	// Explode on hitpoints == 0
+	if (Health <= 0.0f)
+	{
+		SelfDestruct();
+	}
 }
 
 FVector ASTrackerBot::GetNextPathPoint()
@@ -75,6 +80,27 @@ FVector ASTrackerBot::GetNextPathPoint()
 	return GetActorLocation();
 }
 
+
+void ASTrackerBot::SelfDestruct()
+{
+	if (bExploded)
+	{
+		return;
+	}
+
+	bExploded = true;
+
+	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
+
+	// Apply Damage
+	TArray<AActor*> IgnoredActors;
+	IgnoredActors.Add(this);
+	UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
+
+	DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Red, false, 2.0f, 0, 1.0f);
+
+	Destroy();
+}
 
 // Called every frame
 void ASTrackerBot::Tick(float DeltaTime)
