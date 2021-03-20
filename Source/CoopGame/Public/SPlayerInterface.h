@@ -25,4 +25,7 @@ public:
 
 	UFUNCTION(Blueprintcallable, BlueprintNativeEvent, Category="PlayerInterface")
 	bool HasDied() ;
+
+	UFUNCTION()
+	virtual ACharacter* GetPlayerCharacter()=0;
 };

@@ -34,11 +34,14 @@ ASCharacter::ASCharacter()
 
 	GetMovementComponent()->GetNavAgentPropertiesRef().bCanCrouch = true;
 
+	Tags.Add(FName("Player"));
+
 	ZoomedFOV = 65.0f;
 	ZoomInterpSpeed = 20.0f;
 	//bWantsToZoom = false;
 
 	WeaponAttachSocketName = "WeaponSocket";
+	
 }
 
 // Called when the game starts or when spawned; called both on Client and Server
@@ -191,5 +194,10 @@ void ASCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 bool ASCharacter::HasDied_Implementation()
 {
 	return bDied;
+}
+
+ACharacter* ASCharacter::GetPlayerCharacter()
+{
+	return this;
 }
 

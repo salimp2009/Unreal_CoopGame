@@ -88,4 +88,6 @@ public:
 
 	bool HasDied_Implementation() override;
 
+	virtual ACharacter* GetPlayerCharacter() override;
+
 };

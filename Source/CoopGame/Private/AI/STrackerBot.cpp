@@ -3,12 +3,15 @@
 
 #include "AI/STrackerBot.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/SphereComponent.h"
 #include "NavigationSystem.h"
 #include "NavigationPath.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 #include "DrawDebugHelpers.h"
 #include "CoopGame/Public/Components/SHealthComponent.h"
+#include "CoopGame/Public/SPlayerInterface.h"
+
 
 
 ASTrackerBot::ASTrackerBot()
@@ -21,9 +24,16 @@ ASTrackerBot::ASTrackerBot()
 	RootComponent = MeshComp;
 
 	HealthComp = CreateDefaultSubobject<USHealthComponent>(TEXT("HealthComp"));
-	/* OnHealthChanged does not work if it is in constructor therefore move to BeginPlay() and it works*/
+	/* OnHealthChanged does not work if it is in constructor therefore moved to BeginPlay() and it works*/
 	//HealthComp->OnHealthChanged.AddDynamic(this, &ASTrackerBot::HandleTakeDamage);
 
+	SphereComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
+	SphereComp->SetSphereRadius(200.0f);
+	SphereComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	SphereComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+	SphereComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	SphereComp->SetupAttachment(RootComponent);
+	
 	MovementForce = 1000.0f;
 	bUseVelocityChange = true;
 	RequiredDistanceToTarget = 100.0f;
@@ -32,12 +42,14 @@ ASTrackerBot::ASTrackerBot()
 	ExplosionDamage = 40.0f;
 }
 
+
 void ASTrackerBot::BeginPlay()
 {
 	Super::BeginPlay();
 	//initial MoveTo location
 	NextPathPoint = GetNextPathPoint();
 	HealthComp->OnHealthChanged.AddDynamic(this, &ASTrackerBot::HandleTakeDamage);
+
 }
 
 void ASTrackerBot::HandleTakeDamage(USHealthComponent* OwningHealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
@@ -128,5 +140,34 @@ void ASTrackerBot::Tick(float DeltaTime)
 
 	DrawDebugSphere(GetWorld(),	NextPathPoint, 20.0f, 12, FColor::Blue, false, 0.0f, 0, 2.0f);
 	
+}
+
+
+void ASTrackerBot::DamageSelf()
+{
+	UGameplayStatics::ApplyDamage(this, 20.0f, GetInstigatorController(), this, nullptr);
+}
+
+void ASTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
+{
+
+	if (!bStartedSelfDestruction)
+	{
+		/** Alternative is to use ActorTag;
+				e.g; set the Player Character added an element to Tags.Add(FName("Player")) in the constructor
+				then just check; if(OtherActor->ActorHasTag("Player")); NO casting needed
+			*/
+		ISPlayerInterface* PlayerInterface = Cast<ISPlayerInterface>(OtherActor);
+
+		// TODO; Check for if not Exploded
+		if (PlayerInterface)
+		{
+			// Start self damage sequence every 0.5secs without delay
+			GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &ASTrackerBot::DamageSelf, 0.5f, true, 0.0f);
+
+			bStartedSelfDestruction = true;
+		}
+	}
+
 }
 
