@@ -11,6 +11,7 @@
 #include "DrawDebugHelpers.h"
 #include "CoopGame/Public/Components/SHealthComponent.h"
 #include "CoopGame/Public/SPlayerInterface.h"
+#include "Sound/SoundCue.h"
 
 
 
@@ -40,15 +41,20 @@ ASTrackerBot::ASTrackerBot()
 
 	ExplosionRadius = 200.0f;
 	ExplosionDamage = 40.0f;
+	SelfDamageInterval = 0.25f;
 }
 
 
 void ASTrackerBot::BeginPlay()
 {
 	Super::BeginPlay();
-	//initial MoveTo location
-	NextPathPoint = GetNextPathPoint();
 	HealthComp->OnHealthChanged.AddDynamic(this, &ASTrackerBot::HandleTakeDamage);
+
+	if (HasAuthority())
+	{
+		//initial MoveTo location
+		NextPathPoint = GetNextPathPoint();
+	}
 
 }
 
@@ -103,13 +109,14 @@ void ASTrackerBot::SelfDestruct()
 	bExploded = true;
 
 	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
-
+	
 	// Apply Damage
 	TArray<AActor*> IgnoredActors;
 	IgnoredActors.Add(this);
 	UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
 
 	DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Red, false, 2.0f, 0, 1.0f);
+	UGameplayStatics::PlaySoundAtLocation(this, ExplodeSound, GetActorLocation());
 
 	Destroy();
 }
@@ -118,35 +125,32 @@ void ASTrackerBot::SelfDestruct()
 void ASTrackerBot::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	float DistanceToTarget =(GetActorLocation() - NextPathPoint).Size(); // (NextPathPoint - GetActorLocation()).Distance();
-
-	if (DistanceToTarget<=RequiredDistanceToTarget)
+	if (HasAuthority())
 	{
-		NextPathPoint = GetNextPathPoint();
-		DrawDebugString(GetWorld(), GetActorLocation(), "Target Reached !!!");
+		float DistanceToTarget = (GetActorLocation() - NextPathPoint).Size();
+
+		if (DistanceToTarget <= RequiredDistanceToTarget)
+		{
+			NextPathPoint = GetNextPathPoint();
+			DrawDebugString(GetWorld(), GetActorLocation(), "Target Reached !!!");
+		}
+		else
+		{
+			//Keep Moving Towards Target
+			FVector ForceDirection = (NextPathPoint - GetActorLocation());
+			ForceDirection.Normalize();
+			ForceDirection *= MovementForce;   // Add Force Impulse
+
+			MeshComp->AddForce(ForceDirection, NAME_None, bUseVelocityChange);
+
+			DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation() + ForceDirection, 32.0f, FColor::Green, false, 0.0f, 0, 2.0f);
+		}
+
+		DrawDebugSphere(GetWorld(), NextPathPoint, 20.0f, 12, FColor::Blue, false, 0.0f, 0, 2.0f);
+
 	}
-	else
-	{
-		//Keep Moving Towards Target
-		FVector ForceDirection = (NextPathPoint - GetActorLocation());
-		ForceDirection.Normalize();
-		ForceDirection *= MovementForce;   // Add Force Impulse
-
-		MeshComp->AddForce(ForceDirection, NAME_None, bUseVelocityChange);
-
-		DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation()+ForceDirection, 32.0f, FColor::Green, false, 0.0f, 0, 2.0f);
-	}
-
-	DrawDebugSphere(GetWorld(),	NextPathPoint, 20.0f, 12, FColor::Blue, false, 0.0f, 0, 2.0f);
-	
 }
 
-
-void ASTrackerBot::DamageSelf()
-{
-	UGameplayStatics::ApplyDamage(this, 20.0f, GetInstigatorController(), this, nullptr);
-}
 
 void ASTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
 {
@@ -159,15 +163,22 @@ void ASTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
 			*/
 		ISPlayerInterface* PlayerInterface = Cast<ISPlayerInterface>(OtherActor);
 
-		// TODO; Check for if not Exploded
 		if (PlayerInterface)
 		{
-			// Start self damage sequence every 0.5secs without delay
-			GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &ASTrackerBot::DamageSelf, 0.5f, true, 0.0f);
+			// Start self damage sequence every SelfDamageInterval without delay
+			GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &ASTrackerBot::DamageSelf, SelfDamageInterval, true, 0.0f);
 
 			bStartedSelfDestruction = true;
+
+			/*No need to check for nullptr for Sound; it is included in the function but might be better to avoid one less function*/
+			UGameplayStatics::SpawnSoundAttached(SelfDestructSound, RootComponent);
 		}
 	}
 
+}
+
+void ASTrackerBot::DamageSelf()
+{
+	UGameplayStatics::ApplyDamage(this, 20.0f, GetInstigatorController(), this, nullptr);
 }
 
