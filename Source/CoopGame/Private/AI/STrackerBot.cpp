@@ -109,23 +109,32 @@ void ASTrackerBot::SelfDestruct()
 	bExploded = true;
 
 	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
-	
-	// Apply Damage
-	TArray<AActor*> IgnoredActors;
-	IgnoredActors.Add(this);
-	UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
 
-	DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Red, false, 2.0f, 0, 1.0f);
 	UGameplayStatics::PlaySoundAtLocation(this, ExplodeSound, GetActorLocation());
 
-	Destroy();
+	MeshComp->SetVisibility(false, true);
+	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
+	if (HasAuthority())
+	{
+		// Apply Damage
+		TArray<AActor*> IgnoredActors;
+		IgnoredActors.Add(this);
+		UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
+
+		DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Red, false, 2.0f, 0, 1.0f);
+
+		/* Actor will be destroyed after 2 secs on the server to give time client to see the explosion effect*/
+		SetLifeSpan(2.0f);
+	}
+	
 }
 
 // Called every frame
 void ASTrackerBot::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if (HasAuthority())
+	if (HasAuthority() && !bExploded)
 	{
 		float DistanceToTarget = (GetActorLocation() - NextPathPoint).Size();
 
@@ -147,7 +156,6 @@ void ASTrackerBot::Tick(float DeltaTime)
 		}
 
 		DrawDebugSphere(GetWorld(), NextPathPoint, 20.0f, 12, FColor::Blue, false, 0.0f, 0, 2.0f);
-
 	}
 }
 
@@ -155,7 +163,7 @@ void ASTrackerBot::Tick(float DeltaTime)
 void ASTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
 {
 
-	if (!bStartedSelfDestruction)
+	if (!bStartedSelfDestruction && !bExploded)
 	{
 		/** Alternative is to use ActorTag;
 				e.g; set the Player Character added an element to Tags.Add(FName("Player")) in the constructor
@@ -165,8 +173,11 @@ void ASTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
 
 		if (PlayerInterface)
 		{
-			// Start self damage sequence every SelfDamageInterval without delay
-			GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &ASTrackerBot::DamageSelf, SelfDamageInterval, true, 0.0f);
+			if (HasAuthority())
+			{
+				// Start self damage sequence every SelfDamageInterval without delay
+				GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &ASTrackerBot::DamageSelf, SelfDamageInterval, true, 0.0f);
+			}
 
 			bStartedSelfDestruction = true;
 
@@ -174,7 +185,6 @@ void ASTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
 			UGameplayStatics::SpawnSoundAttached(SelfDestructSound, RootComponent);
 		}
 	}
-
 }
 
 void ASTrackerBot::DamageSelf()

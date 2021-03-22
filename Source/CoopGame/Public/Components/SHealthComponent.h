@@ -24,8 +24,13 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 	
-	UPROPERTY(Replicated, BlueprintReadOnly, Category="HealthComponent")
+	UPROPERTY(ReplicatedUsing=OnRep_Health, BlueprintReadOnly, Category="HealthComponent")
 	float Health;
+
+	/** Replication specific trick; OldHealth is the previous value of replicated variable
+		used here to calculate the damage since it was on replicated */
+	UFUNCTION()
+	void OnRep_Health(float OldHealth);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HealthComponent")
 	float DefaultHealth;
