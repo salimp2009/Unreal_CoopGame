@@ -15,7 +15,6 @@ public:
 	// Sets default values for this pawn's properties
 	ASTrackerBot();
 
-	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -81,5 +80,17 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
+
+protected:
+
+	/** Challenge Code;
+	  * material start changing when close the other bot;
+	  * the more the bots gets close to each other, material effect increases and so Power level
+	  * needs to check other bots in range every tick
+	*/
+	void OnCheckNearbyBots();
+	
+	/* When close other bots Powerlevel is incremented and increases the damage it causes when explodes*/
+	int32 PowerLevel;
 
 };

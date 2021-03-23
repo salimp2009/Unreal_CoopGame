@@ -21,6 +21,7 @@ ASTrackerBot::ASTrackerBot()
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
 	MeshComp->SetCanEverAffectNavigation(false);
+	MeshComp->SetCollisionObjectType(ECC_PhysicsBody);
 	MeshComp->SetSimulatePhysics(true);
 	RootComponent = MeshComp;
 
@@ -42,18 +43,26 @@ ASTrackerBot::ASTrackerBot()
 	ExplosionRadius = 200.0f;
 	ExplosionDamage = 40.0f;
 	SelfDamageInterval = 0.25f;
+	PowerLevel = 0;
+
+	Tags.Add(FName("TrackerBot"));
+
 }
 
 
 void ASTrackerBot::BeginPlay()
 {
 	Super::BeginPlay();
+	/* AddDynamic did not work in constructor moved here!!!*/
 	HealthComp->OnHealthChanged.AddDynamic(this, &ASTrackerBot::HandleTakeDamage);
 
 	if (HasAuthority())
 	{
 		//initial MoveTo location
 		NextPathPoint = GetNextPathPoint();
+
+		FTimerHandle TimerHandle_CheckPowerLevel;
+		GetWorldTimerManager().SetTimer(TimerHandle_CheckPowerLevel,this, &ASTrackerBot::OnCheckNearbyBots, 1.0f, true);
 	}
 
 }
@@ -62,7 +71,7 @@ void ASTrackerBot::HandleTakeDamage(USHealthComponent* OwningHealthComp, float H
 {
 	if (MatInst==nullptr)
 	{
-		MatInst = MeshComp->CreateDynamicMaterialInstance(0, MeshComp->GetMaterial(0));
+		MatInst = MeshComp->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComp->GetMaterial(0));
 	}
 
 	if (MatInst)
@@ -120,7 +129,10 @@ void ASTrackerBot::SelfDestruct()
 		// Apply Damage
 		TArray<AActor*> IgnoredActors;
 		IgnoredActors.Add(this);
-		UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
+
+		float ActualDamage = ExplosionDamage + (ExplosionDamage * PowerLevel);
+
+		UGameplayStatics::ApplyRadialDamage(this, ActualDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true, ECC_Pawn);
 
 		DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Red, false, 2.0f, 0, 1.0f);
 
@@ -162,6 +174,7 @@ void ASTrackerBot::Tick(float DeltaTime)
 
 void ASTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
 {
+	Super::NotifyActorBeginOverlap(OtherActor);
 
 	if (!bStartedSelfDestruction && !bExploded)
 	{
@@ -192,3 +205,63 @@ void ASTrackerBot::DamageSelf()
 	UGameplayStatics::ApplyDamage(this, 20.0f, GetInstigatorController(), this, nullptr);
 }
 
+
+void ASTrackerBot::OnCheckNearbyBots()
+{
+	//Distance to check for other bots; TODO; check if we can use static so we specify only once!!!
+	static constexpr float Radius = 600.0f;
+
+	//Temp CollisionSphere; check if we can do this static as well
+	static FCollisionShape CollShape;
+	CollShape.SetSphere(Radius);
+
+	// Filter out only certain objects to apply collision; check if we can do this static as well
+	static FCollisionObjectQueryParams QuerryParams;
+	/*Tracker bot mesh is set as Physics_Body*/
+	QuerryParams.AddObjectTypesToQuery(ECC_PhysicsBody);
+	QuerryParams.AddObjectTypesToQuery(ECC_Pawn);
+	
+
+	TArray<FOverlapResult> Overlaps;
+	GetWorld()->OverlapMultiByObjectType(Overlaps, GetActorLocation(), FQuat::Identity, QuerryParams, CollShape);
+
+	DrawDebugSphere(GetWorld(), GetActorLocation(), Radius, 12, FColor::White, false, 1.0f);
+
+	int32 NumofBots=0;
+
+	/* Check if we overlap anythng*/
+	
+		for (FOverlapResult Result : Overlaps)
+		{
+			/* Alternative the if my original does not work*/
+			ASTrackerBot* Bot = Cast<ASTrackerBot>(Result.GetActor());
+			
+			// check if this works !!!! ; try to use Actor which is a weak_ptr; might need to use Get() to access referred ptr!!!
+			if (Bot && Bot != this)
+			{
+				NumofBots++;
+			}
+		}
+	
+
+	/* Needs to be initialized only once*/
+	static constexpr int32 MaxPowerLevel = 4;
+
+	PowerLevel = FMath::Clamp(NumofBots, 0, MaxPowerLevel);
+
+	
+	if (MatInst == nullptr)
+	{
+		MatInst = MeshComp->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComp->GetMaterial(0));
+	}
+
+	if (MatInst)
+	{
+		float Alpha = PowerLevel / (float)MaxPowerLevel;
+		MatInst->SetScalarParameterValue("PowerLevelAlpha", Alpha);
+
+	}
+
+	DrawDebugString(GetWorld(), FVector(0.0f, 0.0f, 0.0f), FString::FromInt(PowerLevel), this, FColor::Red, 1.0f, true);
+
+}
