@@ -15,6 +15,8 @@ public:
 	// Sets default values for this pawn's properties
 	ASTrackerBot();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -91,6 +93,13 @@ protected:
 	void OnCheckNearbyBots();
 	
 	/* When close other bots Powerlevel is incremented and increases the damage it causes when explodes*/
+	UPROPERTY(ReplicatedUsing=OnRep_PowerLevel, BlueprintReadOnly, Category = "TrackerBot")
 	int32 PowerLevel;
+
+	UFUNCTION()
+	void OnRep_PowerLevel();
+
+	UPROPERTY(Replicated)
+	float AlphaToClients;
 
 };

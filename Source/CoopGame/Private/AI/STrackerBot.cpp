@@ -12,6 +12,7 @@
 #include "CoopGame/Public/Components/SHealthComponent.h"
 #include "CoopGame/Public/SPlayerInterface.h"
 #include "Sound/SoundCue.h"
+#include "Net/UnrealNetwork.h"
 
 
 
@@ -21,7 +22,7 @@ ASTrackerBot::ASTrackerBot()
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
 	MeshComp->SetCanEverAffectNavigation(false);
-	MeshComp->SetCollisionObjectType(ECC_PhysicsBody);
+	MeshComp->SetCollisionObjectType(ECC_WorldDynamic);
 	MeshComp->SetSimulatePhysics(true);
 	RootComponent = MeshComp;
 
@@ -47,6 +48,8 @@ ASTrackerBot::ASTrackerBot()
 
 	Tags.Add(FName("TrackerBot"));
 
+	/*Not neccessary Pawn replicates by default but might still be better to use if defaults changes in the future*/
+	//SetReplicates(true);
 }
 
 
@@ -122,6 +125,7 @@ void ASTrackerBot::SelfDestruct()
 	UGameplayStatics::PlaySoundAtLocation(this, ExplodeSound, GetActorLocation());
 
 	MeshComp->SetVisibility(false, true);
+	MeshComp->SetSimulatePhysics(false);
 	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	
 	if (HasAuthority())
@@ -211,14 +215,14 @@ void ASTrackerBot::OnCheckNearbyBots()
 	//Distance to check for other bots; TODO; check if we can use static so we specify only once!!!
 	static constexpr float Radius = 600.0f;
 
-	//Temp CollisionSphere; check if we can do this static as well
+	//Temp CollisionSphere; added static to initialize only once
 	static FCollisionShape CollShape;
 	CollShape.SetSphere(Radius);
 
-	// Filter out only certain objects to apply collision; check if we can do this static as well
-	static FCollisionObjectQueryParams QuerryParams;
+	// Filter out only certain objects to apply collision;
+	FCollisionObjectQueryParams QuerryParams;
 	/*Tracker bot mesh is set as Physics_Body*/
-	QuerryParams.AddObjectTypesToQuery(ECC_PhysicsBody);
+	QuerryParams.AddObjectTypesToQuery(ECC_WorldDynamic);
 	QuerryParams.AddObjectTypesToQuery(ECC_Pawn);
 	
 
@@ -227,29 +231,29 @@ void ASTrackerBot::OnCheckNearbyBots()
 
 	DrawDebugSphere(GetWorld(), GetActorLocation(), Radius, 12, FColor::White, false, 1.0f);
 
-	int32 NumofBots=0;
+	/* Check if we overlap anythng; if not we dont have to anythng*/
+	if (Overlaps.Num() < 1)
+	{
+		return;
+	}
 
-	/* Check if we overlap anythng*/
-	
+	int32 NumofBots = 0;
 		for (FOverlapResult Result : Overlaps)
 		{
 			/* Alternative the if my original does not work*/
-			ASTrackerBot* Bot = Cast<ASTrackerBot>(Result.GetActor());
-			
+			//ASTrackerBot* Bot = Cast<ASTrackerBot>(Result.GetActor());
+			AActor* Bot = Result.GetActor();
 			// check if this works !!!! ; try to use Actor which is a weak_ptr; might need to use Get() to access referred ptr!!!
-			if (Bot && Bot != this)
+			if(Bot && Bot->ActorHasTag("TrackerBot") && Bot != this)
 			{
 				NumofBots++;
 			}
 		}
 	
-
 	/* Needs to be initialized only once*/
 	static constexpr int32 MaxPowerLevel = 4;
 
 	PowerLevel = FMath::Clamp(NumofBots, 0, MaxPowerLevel);
-
-	
 	if (MatInst == nullptr)
 	{
 		MatInst = MeshComp->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComp->GetMaterial(0));
@@ -258,10 +262,27 @@ void ASTrackerBot::OnCheckNearbyBots()
 	if (MatInst)
 	{
 		float Alpha = PowerLevel / (float)MaxPowerLevel;
+		AlphaToClients = Alpha;
 		MatInst->SetScalarParameterValue("PowerLevelAlpha", Alpha);
 
+		OnRep_PowerLevel();
 	}
 
 	DrawDebugString(GetWorld(), FVector(0.0f, 0.0f, 0.0f), FString::FromInt(PowerLevel), this, FColor::Red, 1.0f, true);
+}
 
+void ASTrackerBot::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ASTrackerBot, PowerLevel);
+	DOREPLIFETIME(ASTrackerBot, AlphaToClients);
+}
+
+void ASTrackerBot::OnRep_PowerLevel()
+{
+	/* Create a copy of MatInst on clients so they see the effects as well*/
+	MatInst = MeshComp->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComp->GetMaterial(0));
+	
+	if (MatInst) MatInst->SetScalarParameterValue("PowerLevelAlpha", AlphaToClients);
 }
