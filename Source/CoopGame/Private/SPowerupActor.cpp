@@ -23,7 +23,7 @@ void ASPowerupActor::OnTickPowerup()
 {
 	++TicksProcessed;
 
-	PowerupTicked();
+	OnPowerupTicked();
 
 	if (TicksProcessed >=TotalNrOfTicks)
 	{
