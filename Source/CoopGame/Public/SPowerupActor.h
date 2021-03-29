@@ -15,8 +15,7 @@ public:
 	ASPowerupActor();
 
 protected:
-	virtual void BeginPlay() override;
-
+	
 	/* Time between powerup applies/ticks */
 	UPROPERTY(EditDefaultsOnly, Category="Powerups")
 	float PowerupInterval;
@@ -32,6 +31,15 @@ protected:
 
 	int32 TicksProcessed;
 
+	UPROPERTY(ReplicatedUsing=OnRep_PowerupActive)
+	bool bIsPowerupActive;
+
+	UFUNCTION()
+	void OnRep_PowerupActive();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Powerups")
+	void OnPowerupStateChanged(bool bNewIsActive);
+
 public:	
 
 	void ActivatePowerup();
@@ -45,4 +53,7 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Powerups")
 	void OnExpired();
+
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 };

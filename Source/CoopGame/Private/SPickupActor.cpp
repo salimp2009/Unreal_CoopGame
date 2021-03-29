@@ -19,13 +19,20 @@ ASPickupActor::ASPickupActor()
 	DecalComp->SetupAttachment(RootComponent);
 
 	CooldownDuration = 10.0f;
+
+	SetReplicates(true);
 }
 
 
 void ASPickupActor::BeginPlay()
 {
 	Super::BeginPlay();
-	Respawn();
+
+	if (HasAuthority())
+	{
+		Respawn();
+	}
+
 }
 
 
@@ -50,7 +57,7 @@ void ASPickupActor::NotifyActorBeginOverlap(AActor* OtherActor)
 {
 	Super::NotifyActorBeginOverlap(OtherActor);
 
-	if (PowerupInstance)
+	if (HasAuthority() && PowerupInstance)
 	{
 		PowerupInstance->ActivatePowerup();
 		PowerupInstance = nullptr;
