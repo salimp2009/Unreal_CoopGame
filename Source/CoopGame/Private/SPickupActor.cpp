@@ -59,7 +59,7 @@ void ASPickupActor::NotifyActorBeginOverlap(AActor* OtherActor)
 
 	if (HasAuthority() && PowerupInstance)
 	{
-		PowerupInstance->ActivatePowerup();
+		PowerupInstance->ActivatePowerup(OtherActor);
 		PowerupInstance = nullptr;
 
 		/* Timer to respawn; only respawn when player gets the current Powerup; not looped */

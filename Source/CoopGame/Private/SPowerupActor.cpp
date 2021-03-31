@@ -43,10 +43,10 @@ void ASPowerupActor::OnRep_PowerupActive()
 		OnPowerupStateChanged(bIsPowerupActive);
 }
 
-void ASPowerupActor::ActivatePowerup()
+void ASPowerupActor::ActivatePowerup(AActor* ActivateFor)
 {
 	/* this is called by Server only ; in the PickupActor class!!!*/
-	OnActivated();
+	OnActivated(ActivateFor);
 	
 	bIsPowerupActive = true;
 	OnRep_PowerupActive();
